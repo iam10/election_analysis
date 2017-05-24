@@ -5,6 +5,7 @@ from load_data import get_week_tuples, get_keywords_2016
 import os
 from sys import argv
 from time import sleep
+import datetime
 # Import Guardian API Access key
 api_key = os.environ['GUARDIAN_ACCESS_KEY']
 
@@ -76,7 +77,7 @@ def scrape_guardian(tab, searchterm, dates):
                 articles = [article for article in response['response']['results']]
                 inserts = [extract_info(article)[1] for article in articles if extract_info(article)[0]]
                 for insert in inserts:
-                    if not already_exists(tab, insert['url']) and searchterm in insert['article_text'].lower():
+                    if not already_exists(tab, insert['url']):
                         tab.insert_one(insert)
         else:
             print (searchterm, date)
@@ -91,25 +92,34 @@ if __name__=='__main__':
     $ python gua_scraper.py 'startdate' 'enddate' 'table (optional)'
     '''
 
+    start_date, end_date = argv[1], argv[2]
+
+    start_datetime = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    end_datetime = datetime.datetime.strptime(end_date, '%Y-%m-%d')
     # Create MongoClient
     client = MongoClient()
     # Initialize the Database
     db = client['election_analysis']
-    # Initialize table
-    # If a table name has been provided use that, otherwise initialize 'articles' table
-    if len(argv) > 3:
-        tab = db[argv[3]]
-    else:
-        tab = db['articles']
+    while True:
+        # Initialize table
+        # If a table name has been provided use that, otherwise initialize 'articles' table
+        if len(argv) > 3:
+            tab = db[argv[3]]
+        else:
+            tab = db['gua_'+start_datetime.strftime('%Y%m%d')+'_'+end_datetime.strftime('%Y%m%d')]
 
-    start_date, end_date = argv[1], argv[2]
-    print 'Scraping the Guardian from {0} to {1}'.format(start_date, end_date)
+        print 'Scraping the Guardian from {0} to {1}'.format(start_date, end_date)
 
-    dates = get_week_tuples(start_date, end_date)
-    searchterms = get_keywords_2016()
+        dates = get_week_tuples(start_date, end_date)
+        searchterms = get_keywords_2016()
 
-    for searchterm in searchterms:
-        print searchterm
-        # Guardian doesn't like the ' in o'malley
-        if searchterm != "o'malley":
-            scrape_guardian(tab, searchterm, dates)
+        for searchterm in searchterms:
+            print searchterm
+            # Guardian doesn't like the ' in o'malley
+            if searchterm != "o'malley":
+                scrape_guardian(tab, searchterm, dates)
+
+        start_datetime = start_datetime - datetime.timedelta(days=7)
+        end_datetime = end_datetime - datetime.timedelta(days=7)
+        start_date = start_datetime.strftime('%Y-%m-%d')
+        end_date = end_datetime.strftime('%Y-%m-%d')

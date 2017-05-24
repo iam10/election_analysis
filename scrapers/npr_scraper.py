@@ -6,7 +6,9 @@ from sys import argv
 import threading
 import os
 # Import NPR API Access key from zsh profile
-api_key = os.environ['NPR_ACCESS_KEY']
+# api_key = os.environ['NPR_ACCESS_KEY']
+client_id = 'nprone_trial_g1hm60l7ijJZ'
+client_secret = 'pXHT4xjcrhr6OALzvq9mDWMppyK7gJy8ejQrhL3J'
 
 
 def single_query(searchterm, date, start_num=0):
@@ -21,7 +23,8 @@ def single_query(searchterm, date, start_num=0):
         'output': 'JSON',
         'numResults': 20,
         'searchType': 'fullContent',
-        'apiKey': api_key
+        'client_id': client_id,
+        'client_secret': client_secret
     }
     url = 'http://api.npr.org/query'
     response = get(url, params=payload)
@@ -68,6 +71,7 @@ def scrape_npr(tab, searchterm, dates, page_num=0):
         if 'message' in response.keys():
             pass
         else:
+            import pdb; pdb.set_trace()
             for article in response['list']['story']:
                 articles.append(article)
     for article in articles:
